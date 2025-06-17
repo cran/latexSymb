@@ -1,0 +1,140 @@
+---
+title: "Advanced Usage of latexSymb: Building Complex Mathematical Documents"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Advanced Usage of latexSymb}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, include = FALSE}
+library(latexSymb)
+data(common)
+attach(common)
+```
+
+## Introduction
+
+This vignette demonstrates advanced techniques for using `latexSymb` to create complex mathematical documents. We'll explore how to organize your code effectively, create reusable functions, and build sophisticated mathematical expressions.
+
+## Code Organization: The Two-File Pattern
+
+When working with complex mathematical documents, it's beneficial to separate your symbol definitions and helper functions from your main document content. This pattern offers several advantages:
+
+1. **Cleaner Documents**: Your .Rmd file remains focused on content rather than setup
+2. **Reusability**: Symbol definitions can be shared across multiple documents
+3. **Maintainability**: Changes to symbols or functions are centralized
+4. **Readability**: Mathematical logic is easier to follow without setup code
+
+### Example: Setting Up a Symbol Library
+
+Create a separate .R file for your symbols, for instance:
+
+```{r}
+# my_symbols.R
+library(latexSymb)
+data(common)
+attach(common)
+
+# Define document-specific symbols
+pt <- lsymb("x")
+pt_prime <- lsymb("x'")
+metric_space <- lsymb("\\mathcal{X}")
+measure <- lsymb("\\mu")
+
+# Create specialized functions
+dist <- function(x, y) lsymb("d") * pths(x * comma * y)
+```
+
+Then, use a separate .Rmd to write the body of your document. In that file, set:
+
+```
+knitr::opts_chunk$set(results = "asis", echo = FALSE)
+source("my_symbols.R")
+```
+
+to make sure that the LaTeX code gets correctly rendered.
+
+## Creating Powerful Helper Functions
+
+You can use `latexSymb` to handle complicated mathematical expressions. The following patterns can be helpful.
+
+### Pattern 1: Building Complex Expressions
+
+Create functions that compose to build sophisticated expressions:
+
+```{r}
+# Expectation operator
+exp_val <- function(x) lsymb("\\mathbb{E}") * sqbr(x)
+
+sq <- function(x) pths(x)^2
+
+# Absolute value
+abs <- function(x) lsymb("\\abs{", x, "}")
+
+# Indicator function
+indic <- function(condition) {
+  lsymb("\\mathbbm{1}") |> under(br(condition))
+}
+
+# Composed example
+X <- lsymb("X")
+Y <- lsymb("Y")
+```
+
+Then you can create expressions like `exp_val(sq(abs(X - Y))) |> il()` to obtain `r exp_val(sq(abs(X - Y))) |> il()` and `exp_val(X * indic(Y > 0)) |> il()` for `r exp_val(X * indic(Y > 0)) |> il()`.
+
+### Pattern 2: Multi-line Equation Builders
+
+This pattern uses lists and the `lenv()` function. Each element of the list corresponds to a row of your displayed expression:
+
+```{r}
+# Build a proof step by step
+proof_steps <- list(
+  ruler * dist(x, y) * leq * dist(x, z) + dist(z, y) * endl,
+  ruler * thus * dist(x, y) - dist(x, z) * leq * dist(z, y)
+) |>
+  lenv("align*", rows = _)
+```
+
+`r proof_steps`
+
+
+## Complex Example: Statistical Proof
+
+Here's how these techniques combine in practice:
+
+```{r}
+# Setup
+sample_size <- lsymb("n")
+observation <- lsymb("X") |> under(i)
+sample_mean <- lsymb("\\bar{X}")
+conv_distr <- lsymb("\\overset{d}{\\rightarrow}")
+sqrt <- function(x) lsymb("\\sqrt{", x, "}")
+
+# Build a Central Limit Theorem statement
+clt_statement <- list(
+  ruler * sqrt(sample_size) * (pths(sample_mean - mu) / si) *
+    conv_distr * lsymb("N(0,1)") * endl,
+  ruler * lsymb("\\text{where }") *
+    sample_mean * eq * (1 / sample_size) * Sum(observation, from = i * eq * 1, to = sample_size)
+) |>
+  lenv("align*", rows = _)
+```
+
+`r clt_statement`
+
+## Conclusion
+
+By organizing your code into separate files, creating reusable functions, and following consistent patterns, you can efficiently create complex mathematical documents with `latexSymb`. The key is to:
+
+1. **Separate concerns**: Keep symbol definitions in .R files
+2. **Build abstractions**: Create functions for repeated patterns
+3. **Compose functions**: Build complex expressions from simple parts
